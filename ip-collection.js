@@ -164,3 +164,5 @@ class IpCollection {
     }
   }
 }
+
+module.exports = IpCollection;
