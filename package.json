@@ -1,5 +1,44 @@
 {
+  "name": "node-ip-collection",
+  "version": "1.0.0",
+  "description": "Nodejs ip collection (fast search ip in range)",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "test": "mocha -- -R spec tests/*.spec.js",
+    "test-coverage-text": "nyc --check-coverage --lines 90 --per-file --reporter=text mocha -- -R spec tests/*.spec.js",
+    "test-coverage-html": "nyc --reporter=html mocha -- -R spec tests/*.spec.js",
+    "prettier": "prettier --write ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sanchezzzhak/node-ip-collection.git"
+  },
+  "keywords": [
+    "check ip in range",
+    "detect bot by ip",
+    "detect vpn by ip"
+  ],
+  "author": "sanchezzzhak",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sanchezzzhak/node-ip-collection/issues"
+  },
+  "homepage": "https://github.com/sanchezzzhaknode-ip-collection#readme",
   "dependencies": {
-    "ip-address": "^8.0.0"
+    "ip-address": "^8.0.0",
+    "js-yaml": "^3.14.0"
+  },
+  "engines": {
+    "node": ">= 10.x",
+    "npm": ">= 6.x"
+  },
+  "devDependencies": {
+    "benchmark": "^2.1.4",
+    "chai": "^4.1.1",
+    "cli-table": "^0.3.1",
+    "mocha": "^8.4.0",
+    "nyc": "^15.1.0",
+    "prettier": "^2.1.1"
   }
 }
