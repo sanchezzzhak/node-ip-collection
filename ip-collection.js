@@ -1,25 +1,13 @@
-const Net = require('net');
-const {Address6, Address4} = require('ip-address');
+const {ipNum} = require('./utils');
+const {getIpFormat} = require('./utils');
 
-
-class IpCollection {
+class AbstractIpCollection {
+  
+  collectionName = '';
+  fixturePath = '';
   
   __ipv4 = {};
   __ipv6 = {};
-  
-  /**
-   * get ip format version
-   *
-   * @param {string} ip
-   * @returns {number}
-   */
-  static getIpFormat(ip) {
-    let version = Net.isIP(ip);
-    if (version === 4 || version === 6) {
-      return version;
-    }
-    return 0;
-  }
   
   /**
    * insert range to object
@@ -86,7 +74,7 @@ class IpCollection {
     };
     
     let result = [];
-    let ip = this.ipNum(rawIp);
+    let ip = ipNum(rawIp);
     let format = IpCollection.getIpFormat(rawIp);
     let splitPath = 2;
     if (format === 0) {
@@ -105,21 +93,8 @@ class IpCollection {
     return result;
   }
   
-  /**
-   * convert ip to bigint
-   *
-   * @param {string} ip
-   * @returns {BigInt}
-   */
-  ipNum(ip) {
-    let format = IpCollection.getIpFormat(ip);
-    if (format === 4) {
-      return BigInt((new Address4(ip)).bigInteger().toString());
-    }
-    if (format === 6) {
-      return BigInt((new Address6(ip)).bigInteger().toString());
-    }
-  }
+  
+  loadFixtures(){}
   
   /**
    * load collection
@@ -142,13 +117,13 @@ class IpCollection {
       if (ipPart.length !== 2) {
         continue;
       }
-      let format = IpCollection.getIpFormat(ipPart[0]);
+      let format = getIpFormat(ipPart[0]);
       if (!format) {
         continue;
       }
       
-      let left = this.ipNum(ipPart[0]);
-      let right = this.ipNum(ipPart[1]);
+      let left = ipNum(ipPart[0]);
+      let right = ipNum(ipPart[1]);
       
       let path = [];
       if (format === 4) {
@@ -165,4 +140,4 @@ class IpCollection {
   }
 }
 
-module.exports = IpCollection;
+module.exports = AbstractIpCollection;

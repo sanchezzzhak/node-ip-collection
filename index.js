@@ -1,6 +1,11 @@
 const IpCollection = require('./ip-collection.js');
 const {Address6, Address4} = require('ip-address');
-const {extractKeyCurrent, binarySearch} = require('./utils');
+const {
+  extractKeyCurrent,
+  binarySearch,
+  ipNum,
+  getIpFormat
+} = require('./utils');
 
 //IpCollection
 
@@ -15,16 +20,11 @@ const IP_PARTS = 225n;
 let a = new Address6('2001:0db8:85a3:0000:0000:8a2e:0370:7334')
 let a2 = new Address6('2001:0db8:85a3:0000:0000:8a2e:0370:7339')
 
-
-let a4 = new Address4('31.169.120.25')
-console.log(a4.bigInteger().toString());
-
-
 console.log(a.decimal().split(':'))
 console.log(a2.decimal().split(':').map(d => parseInt(d, 10)));
 // console.log(a.bigInteger().toString())
 
-class MainCollection extends IpCollection {
+class MainCollection {
   __indexV4 = [];
   __indexV6 = [];
   __cache = false;
@@ -51,13 +51,12 @@ class MainCollection extends IpCollection {
   }
   
   constructor() {
-    super();
     this.initMapIndexes();
   }
   
   getIpInfo(rawIp){
-    let ipInt = this.ipNum(rawIp);
-    let format = this.getIpFormat(rawIp);
+    let ipInt = ipNum(rawIp);
+    let format = getIpFormat(rawIp);
     let index = binarySearch(
       format === 4 ? this.__indexV4
       : this.__indexV6, ipInt, extractKeyCurrent);
@@ -72,11 +71,7 @@ class MainCollection extends IpCollection {
    * @returns {Promise<void>}
    */
   async lookup(rawIp, all = false) {
-
-    let index = this.getIndexIdByIp()
-    console.log({index})
-    
-    
+    let {index, format, ipInt} = this.getIpInfo(rawIp);
   }
   
 }
@@ -84,4 +79,4 @@ class MainCollection extends IpCollection {
 
 // test
 let m = new MainCollection;
-m.lookup('31.169.120.22')
+m.lookup('31.169.120.255');
