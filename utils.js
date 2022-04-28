@@ -11,7 +11,6 @@ const {Address6, Address4} = require('ip-address');
 const binarySearch = (list, item, extractKey) => {
   let low = 0;
   let high = list.length - 1;
-  let count  = 0;
   while (true) {
     let i = Math.round((high - low) / 2) + low;
     if (item < extractKey(list[i])) {
