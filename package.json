@@ -1,8 +1,9 @@
 {
   "name": "node-ip-collection",
   "version": "1.0.0",
-  "description": "Nodejs ip collection (fast search ip in range)",
+  "description": "Nodejs ip collection (fast search ip in custom range)",
   "main": "index.js",
+  "type": "commonjs",
   "private": true,
   "scripts": {
     "test": "mocha -- -R spec tests/*.spec.js",
@@ -16,8 +17,8 @@
   },
   "keywords": [
     "check ip in range",
-    "detect bot by ip",
-    "detect vpn by ip"
+    "ip",
+    "ip-range"
   ],
   "author": "sanchezzzhak",
   "license": "MIT",
@@ -26,19 +27,12 @@
   },
   "homepage": "https://github.com/sanchezzzhaknode-ip-collection#readme",
   "dependencies": {
-    "ip-address": "^8.0.0",
-    "js-yaml": "^3.14.0"
+    "ip-address": "^9.0.5"
   },
   "engines": {
-    "node": ">= 10.x",
-    "npm": ">= 6.x"
+    "node": ">= 12.x",
+    "npm": ">= 10.x"
   },
   "devDependencies": {
-    "benchmark": "^2.1.4",
-    "chai": "^4.1.1",
-    "cli-table": "^0.3.1",
-    "mocha": "^8.4.0",
-    "nyc": "^15.1.0",
-    "prettier": "^2.1.1"
   }
 }
