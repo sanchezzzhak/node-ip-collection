@@ -4,7 +4,6 @@
   "description": "Nodejs ip collection (fast search ip in custom range)",
   "main": "index.js",
   "type": "commonjs",
-  "private": true,
   "scripts": {
     "test": "mocha -- -R spec tests/*.spec.js",
     "test-coverage-text": "nyc --check-coverage --lines 90 --per-file --reporter=text mocha -- -R spec tests/*.spec.js",
