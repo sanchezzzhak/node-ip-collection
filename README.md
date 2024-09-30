@@ -27,5 +27,5 @@ console.log(ip.lookup('103.18.158.1'))
 ```
 
 
-# Misc Wiki
+## Misc Wiki
 * [create detector vpn and bad ip] (/create-detector-vpn-and-bad-ip-by-ip)
