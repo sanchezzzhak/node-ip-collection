@@ -28,4 +28,4 @@ console.log(ip.lookup('103.18.158.1'))
 
 
 ## Misc Wiki
-* [create detector vpn and bad ip] (/create-detector-vpn-and-bad-ip-by-ip)
+* [create detector vpn and bad ip] (https://github.com/sanchezzzhak/node-ip-collection/wiki/Create-detector-vpn-and-bad%E2%80%90ip-by-ip)
