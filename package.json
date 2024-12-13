@@ -27,7 +27,8 @@
   },
   "homepage": "https://github.com/sanchezzzhak/node-ip-collection",
   "dependencies": {
-    "ip-address": "^9.0.5"
+    "ip-address": "^9.0.5",
+    "data-structure-typed": "^2.0.0"
   },
   "engines": {
     "node": ">= 12.x",

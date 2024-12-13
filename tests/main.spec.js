@@ -12,11 +12,5 @@ collection.loadFromString('103.197.28.0-103.197.29.255', 'ya2');
 collection.loadFromString('103.199.184.0-103.199.185.255', 'ya3');
 
 
-/*
-
-* */
-
-
-
 log(collection.lookup('103.18.158.1', true))
 

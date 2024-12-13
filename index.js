@@ -1,29 +1,43 @@
 const {Address6, Address4} = require('ip-address');
+const {Trie} = require('data-structure-typed');
 
-const IPV4_SPLIT = 2;
-const IPV6_SPLIT = 2;
-
-const IP_V4 = 'v4';
-const IP_V6 = 'v6';
+const IP4 = 'v4';
+const IP6 = 'v6';
 const IP_UNK = 'unk';
 
-module.exports = class IpCollection {
+const IP4_OFFSET = 3;
+const IP6_OFFSET = 14;
 
-  dataV4 = {};
-  dataV6 = {};
+class IpCollection {
 
-  /**
-   * Convert ipv6 to big number
-   * @param ip
-   * @return {string}
-   */
-  castIpV6ToNum(ip) {
-    return BigInt(new Address6(ip, 8).bigInteger()).toString();
+  constructor(options = {
+    useHash: false,
+    maxSearch: 70,
+    dataV4: [],
+    dataV6: [],
+    dataValue: {},
+    dataRange: {}
+  }) {
+    this.useHash = options.useHash ?? false;
+    this.maxSearch = options.maxSearch ?? 70;
+    this.dataV4 = new Trie(options.dataV4 ?? [], {caseSensitive: false});
+    this.dataV6 = new Trie(options.dataV6 ?? [], {caseSensitive: false});
+    this.dataValue = options.dataValue ?? {};
+    this.dataRange = options.dataRange ?? {};
   }
 
   /**
-   * Convert ipv4 to big number
-   * @param ip
+   * cast ip v6 string to ip bigint string
+   * @param {string} ip
+   * @return {string}
+   */
+  castIpV6ToNum(ip) {
+    return new Address6(ip, void 0).bigInteger().toString();
+  }
+
+  /**
+   * cast ip v4 string to ip bigint string
+   * @param {string} ip
    * @return {string}
    */
   castIpV4ToNum(ip) {
@@ -31,187 +45,237 @@ module.exports = class IpCollection {
   }
 
   /**
-   * Find partition
-   * @param keyPath
-   * @param collection
-   * @private
-   * @return {*|null}
+   * cast bigint to ip v4 string
+   * @param {bigint} val
+   * @return {String}
    */
-  #findPartition(keyPath, collection) {
-    if (typeof keyPath == 'string') keyPath = keyPath.split('.');
-    let current = collection[keyPath[0]];
-    if (current === void 0) {
-      return null;
-    }
-    let lastKeyIndex = keyPath.length - 1;
-    for (let i = 1; i <= lastKeyIndex; ++i) {
-      let key = keyPath[i];
-      if (current[key] === void 0) {
-        return null;
-      }
-      current = current[key];
-    }
-    return current;
+  castBigIntIpToV4Str(val) {
+    return Address4.fromBigInteger(val).correctForm();
+  }
+
+  /**
+   * cast bigint to ip v6 string
+   * @param {bigint} val
+   * @return {String}
+   */
+  castBigIntIpToV6Str(val) {
+    return Address6.fromBigInteger(val).correctForm();
   }
 
   /**
    * @param {*} ipNum
-   * @param {Object[]} collection
+   * @param {Trie} collection
+   * @param {"v6"|"v4"} ipType
    * @param {boolean} all
-   * @return {[]}
+   * @returns {[]}
    * @private
    */
-  eachLookup(ipNum, collection, all) {
-    let ip = BigInt(ipNum);
-    let result = [];
-    for (let value in collection)
-      for (let i = 0, l = collection[value].length; i < l; i++) {
-        let range = collection[value][i];
-        let rangeStart = BigInt(range[0]);
-        let rangeEnd = BigInt(range[1]);
-        let check = ip >= rangeStart && ip <= rangeEnd;
+  #eachLookup(ipNum, collection, ipType, all = true) {
+    const ipPart = ipNum.split('');
+    const len = ipPart.length;
+    const maxOffset = ipType === IP4 ? IP4_OFFSET : IP6_OFFSET;
 
+    // find all prefix numbers
+    let matches = [];
+    for (let i = 3; i < len; i++) {
+      const offset = len - i;
+      if (offset === maxOffset) {
+        break;
+      }
+      const str = ipPart.slice(0, offset).join('')
+      const words =  collection.getWords(str, this.maxSearch)
+      if (words.length > 0) {
+        matches.push(...words);
+      }
+    }
+
+    matches = [...new Set(matches)];
+
+    const ip = BigInt(ipNum);
+    const result = [];
+    // find entering and getting the result
+    // n - end range, i hash index
+    loopStart: for (let start of matches) {
+      for (let index in this.dataRange[start] ?? []) {
+        const record = this.dataRange[start][index];
+        const rangeStart = BigInt(start);
+        const rangeEnd = BigInt(record.n);
+        const check = ip >= rangeStart && ip <= rangeEnd;
         if (check) {
-          result.indexOf(value) === -1 && result.push(value);
-          if (!all) {
-            return result;
+          if (this.useHash) {
+            const value = this.dataValue[record.i] ?? '';
+            result.push(value);
+          } else {
+            result.push(record.v ?? '');
           }
-          break;
+
+          if (!all) {
+            break loopStart;
+          }
         }
       }
+    }
 
     return result;
   }
 
+
   /**
-   * Find ip in range
-   * @param {string} rawIp
+   * find ip in range collection
+   * @param {string} ip
    * @param {boolean} all
-   * @return {[]|*[]}
+   * @return {*}
    */
-  lookup(rawIp, all = false) {
-    let format = this.formatIP(rawIp);
-    let result = [];
-
-    if (format === IP_UNK) {
-      return [];
+  lookup(ip, all = false) {
+    const format = this.formatIP(ip);
+    if (format === IP4) {
+      return this.#eachLookup(this.castIpV4ToNum(ip), this.dataV4, format, all);
     }
-
-    if (format === IP_V4) {
-      let ip = this.castIpV4ToNum(rawIp);
-      let path = ip.split('', IPV4_SPLIT);
-
-      let collection = this.#findPartition(path, this.dataV4);
-      if (collection === null) {
-        return [];
-      }
-      result = this.eachLookup(ip, collection, all);
+    if (format === IP6) {
+      return this.#eachLookup(this.castIpV6ToNum(ip), this.dataV6, format, all);
     }
-
-    if (format === IP_V6) {
-      let ip = this.castIpV6ToNum(rawIp);
-      let path = ip.split('', IPV6_SPLIT);
-      let collection = this.#findPartition(path, this.dataV6);
-      if (collection === null) {
-        return [];
-      }
-      result = this.eachLookup(ip, collection, all);
-    }
-
-    return result;
-  }
-
-  /**
-   * insert range to object
-   * @param {Object} obj
-   * @param {string} keyPath
-   * @param {*} value
-   */
-  insert(obj, keyPath, value) {
-    if (typeof keyPath == 'string'){
-      keyPath = keyPath.split('.');
-    }
-    const lastKeyIndex = keyPath.length - 1;
-    for (let i = 0; i <= lastKeyIndex; ++i) {
-      const key = keyPath[i];
-      if (obj[key] === void 0) {
-        obj[key] = i === lastKeyIndex ? [] : {};
-      }
-      obj = obj[key];
-    }
-    obj.push(value);
+    return [];
   }
 
   /**
    * get format ip name by ip
-   * @param ip
-   * @returns {string}
+   * @param {string} ip
+   * @return {string}
    */
   formatIP(ip) {
     if (Address4.isValid(ip)) {
-      return IP_V4;
+      return IP4;
     }
     if (Address6.isValid(ip)) {
-      return IP_V6;
+      return IP6;
     }
     return IP_UNK;
   }
 
   /**
-   * parse ip and insert to a boring collection
-   * @param {string} startIp
-   * @param {string} endIp
+   * insert range to data
+   * @param {string} start         - string bigInt ip range start
+   * @param {string} end           - string bigInt ip range end
+   * @param {"v4"|"v6"} ipType     - ip type
    * @param {string|number} value
    */
-  parse(startIp, endIp, value = 0) {
-    let format = this.formatIP(startIp);
-    if (format === IP_UNK) {
-      return;
+  insertRange(start, end, ipType, value) {
+    if (IP6 === ipType) {
+      this.dataV6.add(start);
     }
-    if (format === IP_V4) {
-      let left = this.castIpV4ToNum(startIp);
-      let right = this.castIpV4ToNum(endIp);
-      let path = left.split('', IPV4_SPLIT);
-      path.push(value);
-      this.insert(this.dataV4, path, [left, right]);
-      return;
+    if (IP4 === ipType) {
+      this.dataV4.add(start);
     }
-    if (format === IP_V6) {
-      let left = this.castIpV6ToNum(startIp);
-      let right = this.castIpV6ToNum(endIp);
-      let path = left.split('', IPV6_SPLIT);
-      path.push(value);
-      this.insert(this.dataV6, path, [left, right]);
+    if (!this.dataRange[start]) {
+      this.dataRange[start] = [];
+    }
+
+    if (this.useHash) {
+      const hash = this.stringHash(value);
+      if (!this.dataValue[hash]) {
+        this.dataValue[hash] = value;
+      }
+      this.dataRange[start].push({n: end, i: hash});
+    } else {
+      this.dataRange[start].push({n: end, v: value});
     }
   }
 
+  /**
+   * insert range by Address object to data
+   * @param {Address6|Address4} startAddr
+   * @param {Address6|Address4} endAddr
+   * @param {"v4"|"v6"} ipType
+   * @param {string|number} value
+   */
+  insertRangeAddress(startAddr, endAddr , ipType, value) {
+    this.insertRange(
+      startAddr.bigInteger().toString(),
+      endAddr.bigInteger().toString(), ipType, value
+    );
+  }
   /**
    * load ips to database
-   * @format
-   * ```
-   * 1.1.0.1-1.1.0.3
-   * 1.1.1.1-1.1.1.4
-   * ```
-   * @param {string} list
+   * format line:
+   * 1) ip-ip
+   * 2) ip/mask
+   * 3) string bigint-string bigint
+   * @param listString
    * @param {string|number} value
    */
-  loadFromString(list, value = 0) {
-    const data = list.split('\n');
-    for (let row of data) {
-      if (!row) {
+  loadFromString(listString, value = 0) {
+    let list = listString.split('\n');
+    for (let i in list) {
+      let range = list[i];
+      if (!range) {
         continue;
       }
-      const ipPart = row.split('-');
-      ipPart.length === 2 && this.parse(ipPart[0], ipPart[1], value);
+      let ipType = '';
+      // is CIDR range
+      if (/\/\d+$/.test(range)) {
+        ipType = range.split('.').length === 4 ? IP4: IP6;
+        let addrCIDR = ipType === IP6 ? new Address6(range) : new Address4(range);
+        this.insertRangeAddress(addrCIDR.startAddress(), addrCIDR.endAddress(), ipType, value);
+        continue;
+      }
+      // is range delimiter '-'
+      let [startRange, endRange] = range.split('-');
+      ipType = startRange.split('.').length === 4 ? IP4: IP6;
+      // is range bignumber string
+      if (/^\d+$/.test(startRange)) {
+        ipType = startRange.length <= 14 ? IP4: IP6;
+        this.insertRange(startRange, endRange, ipType, value);
+      } else {
+        let startAddr = ipType === IP6 ? new Address6(startRange) : new Address4(startRange)
+        let endAddr = ipType === IP6 ? new Address6(endRange) : new Address4(endRange)
+        this.insertRangeAddress(startAddr, endAddr, ipType, value);
+      }
     }
   }
 
   /**
-   * clear collections
+   * hash big string to number hash
+   * @param {string} str
+   * @return {number}
+   */
+  stringHash(str) {
+    if (typeof str === 'number') {
+      return str;
+    }
+    let hash = 0;
+    for (let i = 0, len = str.length; i < len; i = i + 1) {
+      const c = str.charCodeAt(i);
+      hash = (((hash << 5) - hash) + c) | 0;
+    }
+    return hash;
+  };
+
+  export() {
+    return JSON.stringify({
+      dataV6: this.dataV6.toArray(),
+      dataV4: this.dataV4.toArray(),
+      dataRange: this.dataRange
+    })
+  }
+
+  import(data) {
+    this.clear();
+    this.dataV4.addMany(data.dataV4 ?? [])
+    this.dataV6.addMany(data.dataV6 ?? [])
+    this.dataRange = data.dataRange ?? {};
+    this.dataValue = data.dataValue ?? {}
+  }
+
+  /**
+   * clear all data
    */
   clear() {
-    this.dataV4 = {};
-    this.dataV6 = {};
+    this.dataV4.clear();
+    this.dataV6.clear();
+    this.dataRange = {};
+    this.dataValue = {};
   }
 
 }
+
+module.exports = IpCollection;
