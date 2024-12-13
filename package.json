@@ -1,15 +1,12 @@
 {
   "name": "node-ip-collection",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nodejs ip collection (fast search ip in custom range)",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "test": "mocha -- -R spec tests/*.spec.js",
-    "test-coverage-text": "nyc --check-coverage --lines 90 --per-file --reporter=text mocha -- -R spec tests/*.spec.js",
-    "test-coverage-html": "nyc --reporter=html mocha -- -R spec tests/*.spec.js",
-    "prettier": "prettier --write ."
+    "test": "node --test tests/*.spec.js"
   },
   "repository": {
     "type": "git",
