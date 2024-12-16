@@ -41,7 +41,7 @@ console.log(ip.lookup('103.18.158.1'))
 | castBigIntIpToV4Str(ip)                | convert bigint to ipv4 string           |
 | castBigIntIpToV6Str(ip)                | convert bigint to ipv6 string           |
 | loadFromString(rangeList, value)       | load data to database                   |
-| loadFromString(rangeList, value)       | load data to database                   |
+| lookup(ip, all)                        | find data                               |
 | import(data)                           | import data from result export() method |
 | export()                               | export data to json string              |
 | insertRange(start, end, ipType, value) | insert range to database                |
@@ -74,4 +74,5 @@ console.timeEnd('test')
 * search geoname_id ~0.736ms
 
 ## Misc Wiki
-* [create detector vpn and bad ip] (https://github.com/sanchezzzhak/node-ip-collection/wiki/Create-detector-vpn-and-bad%E2%80%90ip-by-ip)
+* [create detector vpn and bad ip](https://github.com/sanchezzzhak/node-ip-collection/wiki/Create-detector-vpn-and-bad%E2%80%90ip-by-ip)
+* [convert ip to integer in php](https://github.com/sanchezzzhak/node-ip-collection/wiki/Convert-ip-to-bigint-in-php)
