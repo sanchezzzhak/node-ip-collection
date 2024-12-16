@@ -10,6 +10,9 @@ const IP6_OFFSET = 14;
 
 class IpCollection {
 
+  /**
+   * @param {IpCollectionOptions} options
+   */
   constructor(options = {
     useHash: false,
     maxSearch: 70,
@@ -63,11 +66,11 @@ class IpCollection {
   }
 
   /**
-   * @param {*} ipNum
+   * @param {string} ipNum
    * @param {Trie} collection
-   * @param {"v6"|"v4"} ipType
+   * @param {IpType} ipType
    * @param {boolean} all
-   * @returns {[]}
+   * @return {any[]}
    * @private
    */
   #eachLookup(ipNum, collection, ipType, all = true) {
@@ -119,12 +122,11 @@ class IpCollection {
     return result;
   }
 
-
   /**
    * find ip in range collection
    * @param {string} ip
    * @param {boolean} all
-   * @return {*}
+   * @return {string[]|number[]|any[]}
    */
   lookup(ip, all = false) {
     const format = this.formatIP(ip);
@@ -156,7 +158,7 @@ class IpCollection {
    * insert range to data
    * @param {string} start         - string bigInt ip range start
    * @param {string} end           - string bigInt ip range end
-   * @param {"v4"|"v6"} ipType     - ip type
+   * @param {IpType} ipType        - ip type
    * @param {string|number} value
    */
   insertRange(start, end, ipType, value) {
@@ -235,7 +237,7 @@ class IpCollection {
 
   /**
    * hash big string to number hash
-   * @param {string} str
+   * @param {string|number} str
    * @return {number}
    */
   stringHash(str) {
@@ -250,14 +252,23 @@ class IpCollection {
     return hash;
   };
 
+  /**
+   * export database to json string
+   * @return {string}
+   */
   export() {
     return JSON.stringify({
       dataV6: this.dataV6.toArray(),
       dataV4: this.dataV4.toArray(),
-      dataRange: this.dataRange
+      dataRange: this.dataRange,
+      dataValue: this.dataValue,
     })
   }
 
+  /**
+   * import export data to database
+   * @param {DataImport} data
+   */
   import(data) {
     this.clear();
     this.dataV4.addMany(data.dataV4 ?? [])
