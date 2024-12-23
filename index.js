@@ -1,12 +1,14 @@
 const {Address6, Address4} = require('ip-address');
 const {Trie} = require('data-structure-typed');
 
+
 const IP4 = 'v4';
 const IP6 = 'v6';
 const IP_UNK = 'unk';
-
-const IP4_OFFSET = 3;
-const IP6_OFFSET = 14;
+const IP4_OFFSET = 2;
+const IP6_OFFSET = 2;
+const MAX_SEARCH = 100;
+const TRIE_OPTIONS = {caseSensitive: true};
 
 class IpCollection {
 
@@ -15,16 +17,19 @@ class IpCollection {
    */
   constructor(options = {
     useHash: false,
-    maxSearch: 70,
+    maxSearch: MAX_SEARCH,
     dataV4: [],
     dataV6: [],
     dataValue: {},
-    dataRange: {}
+    dataRange: {},
   }) {
+
+    this.offsetIpV4 = options.offsetIpV4 ?? IP4_OFFSET;
+    this.offsetIpV6 = options.offsetIpV6 ?? IP6_OFFSET;
     this.useHash = options.useHash ?? false;
-    this.maxSearch = options.maxSearch ?? 70;
-    this.dataV4 = new Trie(options.dataV4 ?? [], {caseSensitive: false});
-    this.dataV6 = new Trie(options.dataV6 ?? [], {caseSensitive: false});
+    this.maxSearch = options.maxSearch ?? MAX_SEARCH;
+    this.dataV4 = new Trie(options.dataV4 ?? [], TRIE_OPTIONS);
+    this.dataV6 = new Trie(options.dataV6 ?? [], TRIE_OPTIONS);
     this.dataValue = options.dataValue ?? {};
     this.dataRange = options.dataRange ?? {};
   }
@@ -76,44 +81,53 @@ class IpCollection {
   #eachLookup(ipNum, collection, ipType, all = true) {
     const ipPart = ipNum.split('');
     const len = ipPart.length;
-    const maxOffset = ipType === IP4 ? IP4_OFFSET : IP6_OFFSET;
+    const maxOffset = ipType === IP4 ? this.offsetIpV4 : this.offsetIpV6;
+    const result = [];
 
-    // find all prefix numbers
     let matches = [];
+    // is root children not exist result empty
+   if (!collection.root.children.has(ipPart[0])) {
+      return result;
+    }
+    // is next 2 level not exist result empty
+    if (!collection.root.children.get(ipPart[0]).children.has(ipPart[1])) {
+      return result;
+    }
+    // find all prefix numbers
     for (let i = 3; i < len; i++) {
       const offset = len - i;
+      const str = ipPart.slice(0, offset).join('');
+      const words =  collection.getWords(str, this.maxSearch);
+
+      if (words.length) {
+        matches.push(...words);
+      }
       if (offset === maxOffset) {
         break;
       }
-      const str = ipPart.slice(0, offset).join('')
-      const words =  collection.getWords(str, this.maxSearch)
-      if (words.length > 0) {
-        matches.push(...words);
-      }
     }
-
+    // create a unique matches array
     matches = [...new Set(matches)];
-
-    const ip = BigInt(ipNum);
-    const result = [];
-    // find entering and getting the result
-    // n - end range, i hash index
-    loopStart: for (let start of matches) {
-      for (let index in this.dataRange[start] ?? []) {
-        const record = this.dataRange[start][index];
-        const rangeStart = BigInt(start);
-        const rangeEnd = BigInt(record.n);
-        const check = ip >= rangeStart && ip <= rangeEnd;
-        if (check) {
-          if (this.useHash) {
-            const value = this.dataValue[record.i] ?? '';
-            result.push(value);
-          } else {
-            result.push(record.v ?? '');
-          }
-
-          if (!all) {
-            break loopStart;
+    if (matches.length) {
+      const ip = BigInt(ipNum);
+      // find entering and getting the result
+      // n - end range, i hash index
+      loopStart: for (let start of matches) {
+        for (let index in this.dataRange[start] ?? []) {
+          const record = this.dataRange[start][index];
+          const rangeStart = BigInt(start);
+          const rangeEnd = BigInt(record.n);
+          const check = ip >= rangeStart && ip <= rangeEnd;
+          if (check) {
+            if (this.useHash) {
+              const value = this.dataValue[record.i] ?? '';
+              result.push(value);
+            } else {
+              result.push(record.v ?? '');
+            }
+            if (!all) {
+              break loopStart;
+            }
           }
         }
       }
@@ -250,7 +264,7 @@ class IpCollection {
       hash = (((hash << 5) - hash) + c) | 0;
     }
     return hash;
-  };
+  }
 
   /**
    * export database to json string
@@ -285,6 +299,28 @@ class IpCollection {
     this.dataV6.clear();
     this.dataRange = {};
     this.dataValue = {};
+  }
+
+  /**
+   * get size for database
+   * @return DataSize
+   */
+  get size () {
+    return {
+      v4: this.dataV4.size,
+      v6: this.dataV6.size,
+    };
+  }
+
+  /**
+   * get levels deep for database
+   * @return DataSize
+   */
+  get height() {
+    return {
+      v4: this.dataV4.getHeight(),
+      v6: this.dataV6.getHeight(),
+    };
   }
 
 }

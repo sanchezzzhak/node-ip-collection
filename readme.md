@@ -9,8 +9,10 @@
 ```js
 const IpCollection = new require('node-ip-collection');
 const ip = new IpCollection({
-  useHash: false,     // default value false
-  maxSearch: 70,      // default value 70
+  useHash: false,     // default value false ( hash string value to int is true param)
+  maxSearch: 100,     // default value 100, max Number.MAX_SAFE_INTEGER
+  offsetIpV4: 2,      // min split first ipv4
+  offsetIpV6: 2,      // min split first ipv6
 });
 
 // fixture data
@@ -34,19 +36,19 @@ console.log(ip.lookup('103.18.158.1'))
 ```
 
 # Methods
-| method                                 | description                             |
-|:---------------------------------------|:----------------------------------------|
-| castIpV6ToNum(ip)                      | convert ipv6 to bingint string          |
-| castIpV4ToNum(ip)                      | convert ipv4 to bingint string          |
-| castBigIntIpToV4Str(ip)                | convert bigint to ipv4 string           |
-| castBigIntIpToV6Str(ip)                | convert bigint to ipv6 string           |
-| loadFromString(rangeList, value)       | load data to database                   |
-| lookup(ip, all)                        | find data                               |
-| import(data)                           | import data from result export() method |
-| export()                               | export data to json string              |
-| insertRange(start, end, ipType, value) | insert range to database                |
-| clear()                                | clear all data                          |
-
+| method                                                      | description                                   |
+|:------------------------------------------------------------|:----------------------------------------------|
+| castIpV6ToNum(ipString)                                     | convert ipv6 to bingint string                |
+| castIpV4ToNum(ipString)                                     | convert ipv4 to bingint string                |
+| castBigIntIpToV4Str(ipBigInt)                               | convert bigint to ipv4 string                 |
+| castBigIntIpToV6Str(ipBigInt)                               | convert bigint to ipv6 string                 |
+| loadFromString(list, value)                                 | load data to database                         |
+| lookup(ip, all)                                             | find range for database                       |
+| import(data)                                                | import data from result export() method       |
+| export()                                                    | export data to json string                    |
+| insertRange(startNumber, endNumber, ipType, value)          | insert range to database                      |
+| insertRangeAddress(startAddr, endAddr , ipType, value)      | insert range Address4 or Address6 to database |
+| clear()                                                     | clear all data                                |
 
 # Benchmark maxmind v4 city
 full load data ~58sec (yes it’s long, but don’t rush to give up)

@@ -1,11 +1,11 @@
 const { test } = require('node:test');
-const util = require('node:util')
 const assert = require('node:assert')
 
-const log = (obj) => console.log(util.inspect(obj, {showHidden: false, depth: null, colors: true}));
 const IpCollection = require('../index');
+
 const ip = new IpCollection();
 
+ip.loadFromString('2.72.0.0-2.79.255.255', '13');
 ip.loadFromString('103.18.157.0-103.18.159.255', 'ya1');
 ip.loadFromString('103.18.157.0-103.18.159.255', 'ya2');
 ip.loadFromString('103.197.28.0-103.197.29.255', 'ya2');
@@ -32,6 +32,18 @@ test('test lookup 2001:0470:0036:0065:60DC:916E:DDD5:FFCA', () => {
   assert.deepEqual(ip.lookup('2001:0470:0036:0065:60DC:916E:DDD5:FFCA', true), ['geonode-6252001']);
 });
 
-// test('test lookup from bigint range', () => {
-//   assert.deepEqual(ip.lookup('2001:0470:0036:0065:60DC:916E:DDD5:FFCA', true), ['test-ipv6']);
-// });
+test('test all ranges 2.72.0.0-2.79.255.255', () => {
+  const range = '2.72.0.0-2.79.255.255';
+  const [start, end] = range.split('-');
+  const startNum = BigInt(ip.castIpV4ToNum(start));
+  const endNum = BigInt(ip.castIpV4ToNum(end));
+  for (let i = startNum; i <= endNum; i++) {
+    const ipStr = ip.castBigIntIpToV4Str(i);
+    const operators = [...new Set(ip.lookup(ipStr, true))];
+    const errorMessage =  'ip:' + ipStr + ' operators ids: [' + operators.join() + '] ' +
+      'current num:' + i +
+      ' range num: ' + startNum + '-' + endNum +
+      ' range by: ' + range;
+    assert.equal(true, operators.includes('13'), errorMessage)
+  }
+})

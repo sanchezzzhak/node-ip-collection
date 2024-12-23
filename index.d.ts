@@ -7,6 +7,8 @@ export interface IpCollectionOptions {
   dataV6?: string[];
   dataValue?: DataValue;
   dataRange?: DataRange;
+  offsetIpV4?: number;
+  offsetIpV6?: number;
 }
 
 export interface DataValue {
@@ -26,7 +28,16 @@ export interface DataImport {
   dataValue?: DataValue
 }
 
+export interface DataSize {
+  v4: number
+  v6: number;
+}
+
 export default class IpCollection {
+
+  get size(): DataSize;
+
+  get height(): DataSize;
 
   constructor(options?: IpCollectionOptions);
 
