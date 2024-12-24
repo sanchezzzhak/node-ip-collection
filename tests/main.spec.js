@@ -61,6 +61,14 @@ describe('tests', function() {
     assert.deepEqual(ip.lookup('2001:0470:0036:0065:60DC:916E:DDD5:FFCA', true), ['geonode-6252001']);
   });
 
+  const errorMessage = (ipStr, operators, ipNum, startNum, endNum, range) => {
+    return  'ip:' + ipStr + ' operators ids: [' + operators.join() + '] ' +
+      'current num:' + ipNum +
+      ' range num: ' + startNum + '-' + endNum +
+      ' range by: ' + range;
+  };
+
+
   it('lookup all ranges: 2.72.0.0-2.79.255.255', () => {
     const range = '2.72.0.0-2.79.255.255';
     const [start, end] = range.split('-');
@@ -69,11 +77,33 @@ describe('tests', function() {
     for (let i = startNum; i <= endNum; i++) {
       const ipStr = ip.castBigIntIpToV4Str(i);
         const operators = [...new Set(ip.lookup(ipStr, true))];
-        const errorMessage =  'ip:' + ipStr + ' operators ids: [' + operators.join() + '] ' +
-          'current num:' + i +
-          ' range num: ' + startNum + '-' + endNum +
-          ' range by: ' + range;
-        assert.equal(true, operators.includes('13'), errorMessage)
+        const message = errorMessage(ipStr , operators, i, startNum , endNum + range);
+        assert.equal(true, operators.includes('13'), message)
     }
   });
+
+  describe('lookup all range ipv4 for IpDataOperators', () => {
+    for (let operatorId in IpDataOperators) {
+      const ranges = IpDataOperators[operatorId].split('\n')
+      for (let range of ranges) {
+        const isV4 = range.split('.').length > 1;
+        if (!isV4) {
+          continue;
+        }
+        it('lookup operator id ' + operatorId + ' range ' + range, () => {
+          const [start, end] = range.split('-');
+            const startNum = ip.castIpV4ToNum(start);
+            const endNum = ip.castIpV4ToNum(end);
+            for (let i = startNum; i <= endNum; i++) {
+              const ipStr = ip.castBigIntIpToV4Str(i);
+              const operators = [...new Set(ip.lookup(ipStr, true))];
+              const message = errorMessage(ipStr , operators, i, startNum , endNum + range);
+              assert.isTrue(operators.includes(operatorId), message)
+            }
+        });
+      }
+    }
+  })
+
+
 })
