@@ -1,4 +1,5 @@
 import { Address4, Address6 } from 'ip-address';
+import * as inspector from 'inspector';
 
 export interface IpCollectionOptions {
   useHash?: boolean;
@@ -9,6 +10,17 @@ export interface IpCollectionOptions {
   dataRange?: DataRange;
   offsetIpV4?: number;
   offsetIpV6?: number;
+  resultFormat?: "default" | "stat-result"
+}
+
+export type DefaultResult = string[] | number[];
+
+export interface StatResult {
+  countIterate: number;
+  countFound: number;
+  countWordsIterate: number;
+  time: number;
+  result: DefaultResult;
 }
 
 export interface DataValue {
@@ -16,7 +28,7 @@ export interface DataValue {
 }
 
 export interface DataRange {
-  [key: string]: Array<{ n: string; i?: number; v?: string | number }>;
+  [key: string]: Array<{ s?: string; n?: string; i?: number; v?: string | number }>;
 }
 
 export type IpType = 'v4' | 'v6' | 'unk';
