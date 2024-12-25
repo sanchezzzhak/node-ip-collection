@@ -75,6 +75,20 @@ console.timeEnd('test')
 * full load data ~8sec
 * search geoname_id ~0.736ms
 
+# Benchmark current test data:
+test [benchmark.js](tests%2Fbenchmark.js). database size prefixes: v4: 13331 , v6: 203
+```text
+lockup ip: 2.205.41.192 x 260,700 ops/sec ±0.57% (96 runs sampled)
+lockup ip: 188.65.247.97 x 2,265 ops/sec ±0.26% (99 runs sampled)
+lockup ip: 46.216.70.223 x 26,607 ops/sec ±0.15% (98 runs sampled)
+lockup ip: 46.216.70.224 x 26,618 ops/sec ±0.14% (98 runs sampled)
+lockup ip: 46.56.157.2 x 45,650 ops/sec ±0.46% (98 runs sampled)
+lockup ip: 134.17.140.22 x 127,968 ops/sec ±0.26% (94 runs sampled)
+lockup ip: 217.118.78.211 x 10,696 ops/sec ±0.54% (99 runs sampled)
+lockup ip: 178.178.81.220 x 8,288 ops/sec ±0.37% (98 runs sampled)
+lockup ip: 2a02:d247:5000:: x 2,130 ops/sec ±0.51% (96 runs sampled)
+```
+
 ## Misc Wiki
 * [create detector vpn and bad ip](https://github.com/sanchezzzhak/node-ip-collection/wiki/Create-detector-vpn-and-bad%E2%80%90ip-by-ip)
 * [convert ip to integer in php](https://github.com/sanchezzzhak/node-ip-collection/wiki/Convert-ip-to-bigint-in-php)

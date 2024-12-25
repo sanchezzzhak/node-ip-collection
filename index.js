@@ -1,5 +1,5 @@
-const {Address6, Address4} = require('ip-address');
-const {Trie, TrieNode} = require('data-structure-typed');
+const { Address6, Address4 } = require('ip-address');
+const { Trie, TrieNode } = require('data-structure-typed');
 const Timer = require('./utils/timer');
 
 const IP4 = 'v4';
@@ -8,7 +8,7 @@ const IP_UNK = 'unk';
 const IP4_OFFSET = 2;
 const IP6_OFFSET = 2;
 const MAX_SEARCH = 1000;
-const TRIE_OPTIONS = {caseSensitive: true};
+const TRIE_OPTIONS = { caseSensitive: true };
 
 class IpCollection {
 
@@ -21,7 +21,7 @@ class IpCollection {
     dataV4: [],
     dataV6: [],
     dataValue: {},
-    dataRange: {},
+    dataRange: {}
   }) {
 
     this.offsetIpV4 = options.offsetIpV4 ?? IP4_OFFSET;
@@ -78,7 +78,7 @@ class IpCollection {
    * @param {boolean} all
    * @return {*[]}
    */
-  #matchLockup(matches, ipNum,  all = false) {
+  #matchLockup(matches, ipNum, all = false) {
     const result = [];
     const ip = BigInt(ipNum);
     // find entering and getting the result
@@ -121,7 +121,7 @@ class IpCollection {
    * @return {{found: number, words: string[], inc: number}}
    */
   #getWords(prefix = '', collection, max) {
-    const words= [];
+    const words = [];
     let found = 0;
     let inc = 0;
     let startNode = collection.root;
@@ -129,22 +129,21 @@ class IpCollection {
     /**
      * @param {TrieNode} node
      * @param {string} word
-     * @param {number} max
      */
-    const dfs = (node, word, max) => {
+    const dfs = (node, word) => {
       for (const char of node.children.keys()) {
         const charNode = node.children.get(char);
         inc++;
-        if (charNode !== undefined) {
-          dfs(charNode, word.concat(char), max);
+        if (charNode !== void 0) {
+          dfs(charNode, word.concat(char));
         }
       }
       if (node.isEnd) {
-        if (found > max - 1) return;
+        if (found > max) return;
         words.push(word);
         found++;
       }
-    }
+    };
 
     if (prefix) {
       for (const c of prefix) {
@@ -152,13 +151,13 @@ class IpCollection {
         if (nodeC) {
           startNode = nodeC;
         } else {
-          return {found: 0, inc: 0, words: []};
+          return { found: 0, inc: 0, words: [] };
         }
       }
     }
 
-    if (startNode !== collection.root){
-      dfs(startNode, prefix, max);
+    if (startNode !== collection.root) {
+      dfs(startNode, prefix);
     }
 
     return {found, inc, words};
@@ -178,13 +177,13 @@ class IpCollection {
     let countIterate = 0;
 
     const ipPart = ipNum.split('');
-    const maxOffset = this.#getMaxOffsetByType(ipType)
+    const maxOffset = this.#getMaxOffsetByType(ipType);
     const timer = new Timer();
 
     let matches = [];
     // is root children not exist result empty
     if (!collection.root.children.has(ipPart[0])) {
-      return this.#result({ result: [], time:timer.end()});
+      return this.#result({ result: [], time: timer.end() });
     }
 
     // find all prefix numbers
@@ -222,19 +221,19 @@ class IpCollection {
    * @return {DefaultResult|StatResult}
    */
   #result({
-    result = [],
-    countIterate = 0,
-    countFound = 0,
-    countWordsIterate = 0,
-    time = 0
-  } = {}){
+            result = [],
+            countIterate = 0,
+            countFound = 0,
+            countWordsIterate = 0,
+            time = 0
+          } = {}) {
     if (this.resultFormat === 'stat-result') {
       return {
         countIterate: countIterate,
         countFound: countFound,
         countWordsIterate: countWordsIterate,
         time: time,
-        result: result,
+        result: result
       };
     }
 
@@ -255,7 +254,7 @@ class IpCollection {
     if (format === IP6) {
       return this.#eachLookup(this.castIpV6ToNum(ip), this.dataV6, format, all);
     }
-    return this.#result({result:[]});
+    return this.#result({ result: [] });
   }
 
   /**
@@ -293,7 +292,7 @@ class IpCollection {
     if (!this.dataRange[end]) {
       this.dataRange[end] = [];
     }
-    this.useHash ? this.#insertDataRangeHash(start, end, value): this.#insertDataRangeValue(start, end, value);
+    this.useHash ? this.#insertDataRangeHash(start, end, value) : this.#insertDataRangeValue(start, end, value);
   }
 
   #insertDataRangeHash(start, end, value) {
@@ -301,28 +300,29 @@ class IpCollection {
     if (!this.dataValue[hash]) {
       this.dataValue[hash] = value;
     }
-    this.dataRange[start].push({n: end, i: hash});
-    this.dataRange[end].push({s: start, i: hash});
+    this.dataRange[start].push({ n: end, i: hash });
+    this.dataRange[end].push({ s: start, i: hash });
   }
 
   #insertDataRangeValue(start, end, value) {
-    this.dataRange[start].push({n: end, v: value});
-    this.dataRange[end].push({s: start, v: value});
+    this.dataRange[start].push({ n: end, v: value });
+    this.dataRange[end].push({ s: start, v: value });
   }
 
   /**
    * insert range by Address object to data
    * @param {Address6|Address4} startAddr
    * @param {Address6|Address4} endAddr
-   * @param {"v4"|"v6"} ipType
+   * @param {'v4'|'v6'} ipType
    * @param {string|number} value
    */
-  insertRangeAddress(startAddr, endAddr , ipType, value) {
+  insertRangeAddress(startAddr, endAddr, ipType, value) {
     this.insertRange(
       startAddr.bigInteger().toString(),
       endAddr.bigInteger().toString(), ipType, value
     );
   }
+
   /**
    * load ips to database
    * format line:
@@ -342,21 +342,21 @@ class IpCollection {
       let ipType = '';
       // is CIDR range
       if (/\/\d+$/.test(range)) {
-        ipType = range.split('.').length === 4 ? IP4: IP6;
+        ipType = range.split('.').length === 4 ? IP4 : IP6;
         let addrCIDR = ipType === IP6 ? new Address6(range) : new Address4(range);
         this.insertRangeAddress(addrCIDR.startAddress(), addrCIDR.endAddress(), ipType, value);
         continue;
       }
       // is range delimiter '-'
       let [startRange, endRange] = range.split('-');
-      ipType = startRange.split('.').length === 4 ? IP4: IP6;
+      ipType = startRange.split('.').length === 4 ? IP4 : IP6;
       // is range bignumber string
       if (/^\d+$/.test(startRange)) {
-        ipType = startRange.length <= 14 ? IP4: IP6;
+        ipType = startRange.length <= 14 ? IP4 : IP6;
         this.insertRange(startRange, endRange, ipType, value);
       } else {
-        let startAddr = ipType === IP6 ? new Address6(startRange) : new Address4(startRange)
-        let endAddr = ipType === IP6 ? new Address6(endRange) : new Address4(endRange)
+        let startAddr = ipType === IP6 ? new Address6(startRange) : new Address4(startRange);
+        let endAddr = ipType === IP6 ? new Address6(endRange) : new Address4(endRange);
         this.insertRangeAddress(startAddr, endAddr, ipType, value);
       }
     }
@@ -388,8 +388,8 @@ class IpCollection {
       dataV6: this.dataV6.toArray(),
       dataV4: this.dataV4.toArray(),
       dataRange: this.dataRange,
-      dataValue: this.dataValue,
-    })
+      dataValue: this.dataValue
+    });
   }
 
   /**
@@ -398,10 +398,10 @@ class IpCollection {
    */
   import(data) {
     this.clear();
-    this.dataV4.addMany(data.dataV4 ?? [])
-    this.dataV6.addMany(data.dataV6 ?? [])
+    this.dataV4.addMany(data.dataV4 ?? []);
+    this.dataV6.addMany(data.dataV6 ?? []);
     this.dataRange = data.dataRange ?? {};
-    this.dataValue = data.dataValue ?? {}
+    this.dataValue = data.dataValue ?? {};
   }
 
   /**
@@ -418,10 +418,10 @@ class IpCollection {
    * get size for database
    * @return DataSize
    */
-  get size () {
+  get size() {
     return {
       v4: this.dataV4.size,
-      v6: this.dataV6.size,
+      v6: this.dataV6.size
     };
   }
 
@@ -432,7 +432,7 @@ class IpCollection {
   get height() {
     return {
       v4: this.dataV4.getHeight(),
-      v6: this.dataV6.getHeight(),
+      v6: this.dataV6.getHeight()
     };
   }
 

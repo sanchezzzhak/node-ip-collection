@@ -25,7 +25,8 @@
   },
   "devDependencies": {
     "chai": "^4.5.0",
-    "mocha": "^9.2.2"
+    "mocha": "^11.0.1",
+    "benchmark": "^2.1.4"
   },
   "scripts": {
     "coverage": "istanbul cover --report html ./node_modules/mocha/bin/_mocha -- -R spec test/*.spec.js",
