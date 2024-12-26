@@ -1,37 +1,110 @@
 const { Address6, Address4 } = require('ip-address');
-const { Trie, TrieNode } = require('data-structure-typed');
 const Timer = require('./utils/timer');
 
 const IP4 = 'v4';
 const IP6 = 'v6';
 const IP_UNK = 'unk';
-const IP4_OFFSET = 2;
-const IP6_OFFSET = 2;
-const MAX_SEARCH = 1000;
-const TRIE_OPTIONS = { caseSensitive: true };
+
+/**
+ * Fix Math.max for BigInt range 128bit
+ * @param args
+ * @return {*}
+ */
+const bigIntMax = (...args) => args.reduce((m, e) => e > m ? e : m);
+
+/**
+ * hash big string to number hash
+ * @param {string|number} str
+ * @return {number}
+ */
+const stringHash = (str) => {
+  if (typeof str === 'number') {
+    return str;
+  }
+  let hash = 0;
+  for (let i = 0, len = str.length; i < len; i = i + 1) {
+    const c = str.charCodeAt(i);
+    hash = (((hash << 5) - hash) + c) | 0;
+  }
+  return hash;
+};
+
+
+class IntervalNode {
+  constructor(interval, value) {
+    this.interval = interval; // { start: BigInt, end: BigInt }
+    this.value = value;
+    this.left = null;
+    this.right = null;
+    this.maxEnd = interval.end; // Maximum end of any interval in this subtree
+    this.intervals = [interval]; // Store all intervals for this node
+  }
+}
+
+class IntervalMultiTree {
+  constructor() {
+    this.root = null;
+  }
+
+  insert(start, end, value) {
+    this.root = this.#insertNode(this.root, { start: BigInt(start), end: BigInt(end) }, value);
+  }
+
+  #insertNode(node, interval, value) {
+    if (!node) {
+      return new IntervalNode(interval, value);
+    }
+    // Decide where to insert based on the start of the interval
+    if (interval.start < node.interval.start) {
+      node.left = this.#insertNode(node.left, interval, value);
+    } else {
+      node.right = this.#insertNode(node.right, interval, value);
+    }
+    // Update maxEnd for the node
+    node.maxEnd = bigIntMax(node.maxEnd, interval.end);
+    // Add the interval to the node if it overlaps
+    if (this.#overlaps(node.interval, interval)) {
+      node.intervals.push(interval);
+    }
+    return node;
+  }
+
+  #overlaps(a, b) {
+    return a.start <= b.end && b.start <= a.end;
+  }
+
+  search(ip, countIterate = 0) {
+    const results = [];
+    this.#searchNode(this.root, BigInt(ip), results, countIterate);
+    return results;
+  }
+
+  #searchNode(node, ip, results, countIterate = 0) {
+    if (!node) return;
+
+    countIterate++;
+
+    if (ip <= node.maxEnd) {
+      for (const interval of node.intervals) {
+        if (ip >= interval.start && ip <= interval.end) {
+          results.push(node.value);
+        }
+      }
+      this.#searchNode(node.left, ip, results, countIterate);
+    }
+
+    this.#searchNode(node.right, ip, results, countIterate);
+  }
+}
 
 class IpCollection {
 
   /**
    * @param {IpCollectionOptions} options
    */
-  constructor(options = {
-    useHash: false,
-    maxSearch: MAX_SEARCH,
-    dataV4: [],
-    dataV6: [],
-    dataValue: {},
-    dataRange: {}
-  }) {
-
-    this.offsetIpV4 = options.offsetIpV4 ?? IP4_OFFSET;
-    this.offsetIpV6 = options.offsetIpV6 ?? IP6_OFFSET;
-    this.useHash = options.useHash ?? false;
-    this.maxSearch = options.maxSearch ?? MAX_SEARCH;
-    this.dataV4 = new Trie(options.dataV4 ?? [], TRIE_OPTIONS);
-    this.dataV6 = new Trie(options.dataV6 ?? [], TRIE_OPTIONS);
-    this.dataValue = options.dataValue ?? {};
-    this.dataRange = options.dataRange ?? {};
+  constructor(options = {}) {
+    this.dataV4 = {};
+    this.dataV6 = {};
     this.resultFormat = options.resultFormat ?? 'default';
   }
 
@@ -72,172 +145,52 @@ class IpCollection {
   }
 
   /**
-   * check range for matches words
-   * @param {string[]} matches
-   * @param {string|bigint}ipNum
-   * @param {boolean} all
-   * @return {*[]}
-   */
-  #matchLockup(matches, ipNum, all = false) {
-    const result = [];
-    const ip = BigInt(ipNum);
-    // find entering and getting the result
-    // s - start range, n - end range, i - hash index, v - value
-    loopStart: for (let position of matches) {
-      for (let index in this.dataRange[position] ?? []) {
-        const record = this.dataRange[position][index];
-        const rangeStart = record.s ? BigInt(record.s) : BigInt(position);
-        const rangeEnd = record.n ? BigInt(record.n) : BigInt(position);
-        const check = ip >= rangeStart && ip <= rangeEnd;
-        if (check) {
-          if (this.useHash) {
-            const value = this.dataValue[record.i] ?? '';
-            result.push(value);
-          } else {
-            result.push(record.v ?? '');
-          }
-          if (!all) {
-            break loopStart;
-          }
-        }
-      }
-    }
-
-    return [...new Set(result)];
-  }
-
-  /**
-   * @param {IpType} ipType
-   * @return {number}
-   */
-  #getMaxOffsetByType(ipType) {
-    return ipType === IP4 ? this.offsetIpV4 : this.offsetIpV6;
-  }
-
-  /**
-   * @param {string} prefix
-   * @param {Trie} collection
-   * @param {number} max
-   * @return {{found: number, words: string[], inc: number}}
-   */
-  #getWords(prefix = '', collection, max) {
-    const words = [];
-    let found = 0;
-    let inc = 0;
-    let startNode = collection.root;
-
-    /**
-     * @param {TrieNode} node
-     * @param {string} word
-     */
-    const dfs = (node, word) => {
-      for (const char of node.children.keys()) {
-        const charNode = node.children.get(char);
-        inc++;
-        if (charNode !== void 0) {
-          dfs(charNode, word.concat(char));
-        }
-      }
-      if (node.isEnd) {
-        if (found > max) return;
-        words.push(word);
-        found++;
-      }
-    };
-
-    if (prefix) {
-      for (const c of prefix) {
-        const nodeC = startNode.children.get(c);
-        if (nodeC) {
-          startNode = nodeC;
-        } else {
-          return { found: 0, inc: 0, words: [] };
-        }
-      }
-    }
-
-    if (startNode !== collection.root) {
-      dfs(startNode, prefix);
-    }
-
-    return {found, inc, words};
-  }
-
-  /**
    * @param {string} ipNum
-   * @param {Trie} collection
+   * @param {{[k:string]:IntervalMultiTree}} collection
    * @param {IpType} ipType
    * @param {boolean} all
    * @return {DefaultResult|StatResult}
    * @private
    */
   #eachLookup(ipNum, collection, ipType, all = true) {
-    let countWordsIterate = 0;
-    let countFound = 0;
-    let countIterate = 0;
-
-    const ipPart = ipNum.split('');
-    const maxOffset = this.#getMaxOffsetByType(ipType);
+    const result = [];
     const timer = new Timer();
-
-    let matches = [];
-    // is root children not exist result empty
-    if (!collection.root.children.has(ipPart[0])) {
+    const prefix = ipNum.substring(0, 2);
+    if (!collection[prefix]) {
       return this.#result({ result: [], time: timer.end() });
     }
 
-    // find all prefix numbers
-    for (let i = 3, len = ipPart.length; i < len; i++, countIterate++) {
-      const offset = len - i;
-      const str = ipPart.slice(0, offset).join('');
-      const data = this.#getWords(str, collection, this.maxSearch);
+    const ip = BigInt(ipNum);
+    let countIterate = 0
 
-      if (data.words.length) {
-        matches.push(...data.words);
-      }
-      countWordsIterate += data.inc;
-      countFound += data.found;
-
-      if (offset === maxOffset) {
-        break;
-      }
-    }
-
-    // create a unique matches array
-    matches = [...new Set(matches)];
-    const result = matches.length ? this.#matchLockup(matches, ipNum, all) : [];
+    result.push(...(collection[prefix].search(ip, countIterate) || []));
 
     return this.#result({
-      result, countIterate, countFound, countWordsIterate, time: timer.end()
+      result,
+      countIterate: 1,
+      countFound: result.length,
+      countWordsIterate: 0,
+      time: timer.end(),
     });
   }
 
   /**
    * @param {DefaultResult} result
    * @param {number} countIterate
-   * @param {number} countFound
-   * @param {number} countWordsIterate
    * @param {number} time
    * @return {DefaultResult|StatResult}
    */
-  #result({
-            result = [],
-            countIterate = 0,
-            countFound = 0,
-            countWordsIterate = 0,
-            time = 0
-          } = {}) {
+  #result({ result = [], countIterate = 0, time = 0} = {}) {
+    const uniqueResult = [... new Set(result)];
     if (this.resultFormat === 'stat-result') {
       return {
         countIterate: countIterate,
-        countFound: countFound,
-        countWordsIterate: countWordsIterate,
         time: time,
-        result: result
+        result: uniqueResult,
       };
     }
 
-    return result;
+    return uniqueResult
   }
 
   /**
@@ -280,33 +233,17 @@ class IpCollection {
    * @param {string|number} value
    */
   insertRange(start, end, ipType, value) {
-    if (IP6 === ipType) {
-      this.dataV6.addMany([start, end]);
-    }
-    if (IP4 === ipType) {
-      this.dataV4.addMany([start, end]);
-    }
-    if (!this.dataRange[start]) {
-      this.dataRange[start] = [];
-    }
-    if (!this.dataRange[end]) {
-      this.dataRange[end] = [];
-    }
-    this.useHash ? this.#insertDataRangeHash(start, end, value) : this.#insertDataRangeValue(start, end, value);
-  }
+    const startPrefix = start.toString().substring(0, 2);
+    const endPrefix = end.toString().substring(0, 2);
 
-  #insertDataRangeHash(start, end, value) {
-    const hash = this.stringHash(value);
-    if (!this.dataValue[hash]) {
-      this.dataValue[hash] = value;
-    }
-    this.dataRange[start].push({ n: end, i: hash });
-    this.dataRange[end].push({ s: start, i: hash });
-  }
+    const tree = ipType === IP6 ? this.dataV6 : this.dataV4;
 
-  #insertDataRangeValue(start, end, value) {
-    this.dataRange[start].push({ n: end, v: value });
-    this.dataRange[end].push({ s: start, v: value });
+    tree[startPrefix] = tree[startPrefix] || new IntervalMultiTree();
+    tree[startPrefix].insert(start, end, value);
+    if (startPrefix !== endPrefix) {
+      tree[endPrefix] = tree[endPrefix] || new IntervalMultiTree();
+      tree[endPrefix].insert(start, end, value);
+    }
   }
 
   /**
@@ -360,58 +297,14 @@ class IpCollection {
         this.insertRangeAddress(startAddr, endAddr, ipType, value);
       }
     }
-  }
 
-  /**
-   * hash big string to number hash
-   * @param {string|number} str
-   * @return {number}
-   */
-  stringHash(str) {
-    if (typeof str === 'number') {
-      return str;
-    }
-    let hash = 0;
-    for (let i = 0, len = str.length; i < len; i = i + 1) {
-      const c = str.charCodeAt(i);
-      hash = (((hash << 5) - hash) + c) | 0;
-    }
-    return hash;
   }
-
-  /**
-   * export database to json string
-   * @return {string}
-   */
-  export() {
-    return JSON.stringify({
-      dataV6: this.dataV6.toArray(),
-      dataV4: this.dataV4.toArray(),
-      dataRange: this.dataRange,
-      dataValue: this.dataValue
-    });
-  }
-
-  /**
-   * import export data to database
-   * @param {DataImport} data
-   */
-  import(data) {
-    this.clear();
-    this.dataV4.addMany(data.dataV4 ?? []);
-    this.dataV6.addMany(data.dataV6 ?? []);
-    this.dataRange = data.dataRange ?? {};
-    this.dataValue = data.dataValue ?? {};
-  }
-
-  /**
+    /**
    * clear all data
    */
   clear() {
-    this.dataV4.clear();
-    this.dataV6.clear();
-    this.dataRange = {};
-    this.dataValue = {};
+    this.dataV4 = {};
+    this.dataV6 = {};
   }
 
   /**
@@ -420,8 +313,8 @@ class IpCollection {
    */
   get size() {
     return {
-      v4: this.dataV4.size,
-      v6: this.dataV6.size
+      v4: 0, //this.dataV4.size,
+      v6: 0, //this.dataV6.size
     };
   }
 
@@ -431,8 +324,8 @@ class IpCollection {
    */
   get height() {
     return {
-      v4: this.dataV4.getHeight(),
-      v6: this.dataV6.getHeight()
+      v4: 0,
+      v6: 0,
     };
   }
 

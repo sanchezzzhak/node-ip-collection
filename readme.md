@@ -1,5 +1,6 @@
 # [node-ip-collection](https://www.npmjs.com/package/node-ip-collection)
-⭐ fast search ip in range collection ipv4 and ipv6 (it is based on nesting Trie)
+⭐ fast search ip in range collection ipv4 and ipv6 (it is based on nesting IntervalMultiTree)
+* minimal dependencies 
 * support range format:
 1) ip CIDR range: 5.151.236.0/23
 2) ip-ip range string: 103.18.156.0-103.18.157.255
@@ -8,13 +9,7 @@
 # base usage
 ```js
 const IpCollection = new require('node-ip-collection');
-const ip = new IpCollection({
-  useHash: false,     // default value false ( hash string value to int is true param)
-  maxSearch: 100,     // default value 100, max Number.MAX_SAFE_INTEGER
-  offsetIpV4: 2,      // min split first ipv4
-  offsetIpV6: 2,      // min split first ipv6
-});
-
+const ip = new IpCollection();
 // fixture data
 const BotSearch = [
   {
@@ -44,28 +39,11 @@ console.log(ip.lookup('103.18.158.1'))
 | castBigIntIpToV6Str(ipBigInt)                               | convert bigint to ipv6 string                 |
 | loadFromString(list, value)                                 | load data to database                         |
 | lookup(ip, all)                                             | find range for database                       |
-| import(data)                                                | import data from result export() method       |
-| export()                                                    | export data to json string                    |
 | insertRange(startNumber, endNumber, ipType, value)          | insert range to database                      |
 | insertRangeAddress(startAddr, endAddr , ipType, value)      | insert range Address4 or Address6 to database |
 | clear()                                                     | clear all data                                |
 
-# Benchmark maxmind v4 city
-full load data ~58sec (yes it’s long, but don’t rush to give up)
-```js
-await (new Promise((resolve, reject) => {
-  fs.createReadStream(__dirname + '/GeoLite2-City-Blocks-IPv4.csv')
-  .pipe(csv.parse({headers: true}))
-  .on('error', error => console.error(error))
-  .on('data', row => {
-  	 ip.loadFromString(row.network, row.geoname_id)
-  })
-  .on('end', () => {
-  	resolve();
-  })
-}));
-```
-search geoname_id ~0.736ms
+
 ```js
 console.time('test')
 console.log('result', '151.236.160.253', ip.lookup('151.236.160.253', true));
@@ -76,17 +54,17 @@ console.timeEnd('test')
 * search geoname_id ~0.736ms
 
 # Benchmark current test data:
-test [benchmark.js](tests%2Fbenchmark.js). database size prefixes: v4: 13331 , v6: 203
+test [benchmark.js](tests%2Fbenchmark.js). database size prefixes: v4: 7800 ranges , v6: 203 ranges
 ```text
-lockup ip: 2.205.41.192 x 260,700 ops/sec ±0.57% (96 runs sampled)
-lockup ip: 188.65.247.97 x 2,265 ops/sec ±0.26% (99 runs sampled)
-lockup ip: 46.216.70.223 x 26,607 ops/sec ±0.15% (98 runs sampled)
-lockup ip: 46.216.70.224 x 26,618 ops/sec ±0.14% (98 runs sampled)
-lockup ip: 46.56.157.2 x 45,650 ops/sec ±0.46% (98 runs sampled)
-lockup ip: 134.17.140.22 x 127,968 ops/sec ±0.26% (94 runs sampled)
-lockup ip: 217.118.78.211 x 10,696 ops/sec ±0.54% (99 runs sampled)
-lockup ip: 178.178.81.220 x 8,288 ops/sec ±0.37% (98 runs sampled)
-lockup ip: 2a02:d247:5000:: x 2,130 ops/sec ±0.51% (96 runs sampled)
+lockup ip: 2.205.41.192 x 450,963 ops/sec ±0.49% (98 runs sampled)
+lockup ip: 188.65.247.97 x 241,787 ops/sec ±0.36% (97 runs sampled)
+lockup ip: 46.216.70.223 x 359,928 ops/sec ±0.22% (94 runs sampled)
+lockup ip: 46.216.70.224 x 357,693 ops/sec ±0.18% (98 runs sampled)
+lockup ip: 46.56.157.2 x 378,274 ops/sec ±0.43% (98 runs sampled)
+lockup ip: 134.17.140.22 x 382,771 ops/sec ±0.65% (96 runs sampled)
+lockup ip: 217.118.78.211 x 297,860 ops/sec ±0.17% (92 runs sampled)
+lockup ip: 178.178.81.220 x 367,641 ops/sec ±0.26% (95 runs sampled)
+lockup ip: 2a02:d247:5000:: x 64,113 ops/sec ±0.27% (101 runs sampled)
 ```
 
 ## Misc Wiki
