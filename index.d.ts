@@ -1,44 +1,17 @@
 import { Address4, Address6 } from 'ip-address';
-import * as inspector from 'inspector';
 
 export interface IpCollectionOptions {
-  useHash?: boolean;
-  maxSearch?: number;
-  dataV4?: string[];
-  dataV6?: string[];
-  dataValue?: DataValue;
-  dataRange?: DataRange;
-  offsetIpV4?: number;
-  offsetIpV6?: number;
   resultFormat?: "default" | "stat-result"
 }
 
 export type DefaultResult = string[] | number[];
 
 export interface StatResult {
-  countIterate: number;
-  countFound: number;
-  countWordsIterate: number;
   time: number;
   result: DefaultResult;
 }
 
-export interface DataValue {
-  [key: string]: string | number;
-}
-
-export interface DataRange {
-  [key: string]: Array<{ s?: string; n?: string; i?: number; v?: string | number }>;
-}
-
 export type IpType = 'v4' | 'v6' | 'unk';
-
-export interface DataImport {
-  dataV4: string[],
-  dataV6: string[],
-  dataRange: DataRange;
-  dataValue?: DataValue
-}
 
 export interface DataSize {
   v4: number
@@ -46,7 +19,6 @@ export interface DataSize {
 }
 
 export default class IpCollection {
-
   get size(): DataSize;
 
   get height(): DataSize;
@@ -75,12 +47,6 @@ export default class IpCollection {
   ): void;
 
   loadFromString(listString: string, value: string | number): void;
-
-  stringHash(str: string | number): number;
-
-  export(): string;
-
-  import(data: DataImport): void;
 
   clear(): void;
 

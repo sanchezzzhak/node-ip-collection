@@ -33,8 +33,8 @@ console.log(ip.lookup('103.18.158.1'))
 # Methods
 | method                                                      | description                                   |
 |:------------------------------------------------------------|:----------------------------------------------|
-| castIpV6ToNum(ipString)                                     | convert ipv6 to bingint string                |
-| castIpV4ToNum(ipString)                                     | convert ipv4 to bingint string                |
+| castIpV6ToNum(ipString)                                     | convert ipv6 to bigint string                 |
+| castIpV4ToNum(ipString)                                     | convert ipv4 to bigint string                 |
 | castBigIntIpToV4Str(ipBigInt)                               | convert bigint to ipv4 string                 |
 | castBigIntIpToV6Str(ipBigInt)                               | convert bigint to ipv6 string                 |
 | loadFromString(list, value)                                 | load data to database                         |

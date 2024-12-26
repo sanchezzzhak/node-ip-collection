@@ -60,7 +60,7 @@ describe('tests', function() {
   it('lookup 2.205.41.192 + result stat-format ', () => {
     ip.resultFormat = 'stat-result'
     const data = ip.lookup('2.205.41.192', true);
-    assert.hasAllKeys(data, ['time', "countIterate", "result"])
+    assert.hasAllKeys(data, ['time', "result"])
     assert.deepEqual(data.result, ['28']);
     console.log(data);
   });
@@ -106,10 +106,7 @@ describe('tests', function() {
         const i = getRandomBigInt(startNum, endNum);
         const ipStr = isV4 ? ip.castBigIntIpToV4Str(i): ip.castBigIntIpToV6Str(i);
         const data = ip.lookup(ipStr, true);
-
         console.log(ipStr, data);
-
-
         const operators = data.result;
         const message = errorMessage(ipStr, operators, i, startNum, endNum, range);
         assert.equal(true, operators.includes(operatorId), message);

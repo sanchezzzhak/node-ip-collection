@@ -6,7 +6,7 @@ const IP6 = 'v6';
 const IP_UNK = 'unk';
 
 /**
- * Fix Math.max for BigInt range 128bit
+ * Fix Math.max(min, max) for BigInt range 128bit
  * @param args
  * @return {*}
  */
@@ -46,8 +46,8 @@ class IntervalMultiTree {
     this.root = null;
   }
 
-  insert(start, end, value) {
-    this.root = this.#insertNode(this.root, { start: BigInt(start), end: BigInt(end) }, value);
+  #overlaps(a, b) {
+    return a.start <= b.end && b.start <= a.end;
   }
 
   #insertNode(node, interval, value) {
@@ -69,31 +69,27 @@ class IntervalMultiTree {
     return node;
   }
 
-  #overlaps(a, b) {
-    return a.start <= b.end && b.start <= a.end;
+  insert(start, end, value) {
+    this.root = this.#insertNode(this.root, { start: BigInt(start), end: BigInt(end) }, value);
   }
 
-  search(ip, countIterate = 0) {
+  search(ip) {
     const results = [];
-    this.#searchNode(this.root, BigInt(ip), results, countIterate);
+    this.#searchNode(this.root, BigInt(ip), results);
     return results;
   }
 
-  #searchNode(node, ip, results, countIterate = 0) {
+  #searchNode(node, ip, results) {
     if (!node) return;
-
-    countIterate++;
-
     if (ip <= node.maxEnd) {
       for (const interval of node.intervals) {
         if (ip >= interval.start && ip <= interval.end) {
           results.push(node.value);
         }
       }
-      this.#searchNode(node.left, ip, results, countIterate);
+      this.#searchNode(node.left, ip, results);
     }
-
-    this.#searchNode(node.right, ip, results, countIterate);
+    this.#searchNode(node.right, ip, results);
   }
 }
 
@@ -147,49 +143,39 @@ class IpCollection {
   /**
    * @param {string} ipNum
    * @param {{[k:string]:IntervalMultiTree}} collection
-   * @param {IpType} ipType
    * @param {boolean} all
    * @return {DefaultResult|StatResult}
    * @private
    */
-  #eachLookup(ipNum, collection, ipType, all = true) {
+  #eachLookup(ipNum, collection, all = true) {
     const result = [];
     const timer = new Timer();
     const prefix = ipNum.substring(0, 2);
     if (!collection[prefix]) {
       return this.#result({ result: [], time: timer.end() });
     }
-
     const ip = BigInt(ipNum);
-    let countIterate = 0
-
-    result.push(...(collection[prefix].search(ip, countIterate) || []));
-
+    result.push(...(collection[prefix].search(ip) || []));
     return this.#result({
       result,
-      countIterate: 1,
-      countFound: result.length,
-      countWordsIterate: 0,
       time: timer.end(),
     });
   }
 
   /**
-   * @param {DefaultResult} result
-   * @param {number} countIterate
-   * @param {number} time
+   *
+   * @param result
+   * @param time
    * @return {DefaultResult|StatResult}
    */
-  #result({ result = [], countIterate = 0, time = 0} = {}) {
+  #result({ result = [], time = 0}) {
     const uniqueResult = [... new Set(result)];
     if (this.resultFormat === 'stat-result') {
       return {
-        countIterate: countIterate,
-        time: time,
+        time,
         result: uniqueResult,
       };
     }
-
     return uniqueResult
   }
 
@@ -202,10 +188,10 @@ class IpCollection {
   lookup(ip, all = false) {
     const format = this.formatIP(ip);
     if (format === IP4) {
-      return this.#eachLookup(this.castIpV4ToNum(ip), this.dataV4, format, all);
+      return this.#eachLookup(this.castIpV4ToNum(ip), this.dataV4, all);
     }
     if (format === IP6) {
-      return this.#eachLookup(this.castIpV6ToNum(ip), this.dataV6, format, all);
+      return this.#eachLookup(this.castIpV6ToNum(ip), this.dataV6, all);
     }
     return this.#result({ result: [] });
   }
@@ -235,9 +221,7 @@ class IpCollection {
   insertRange(start, end, ipType, value) {
     const startPrefix = start.toString().substring(0, 2);
     const endPrefix = end.toString().substring(0, 2);
-
     const tree = ipType === IP6 ? this.dataV6 : this.dataV4;
-
     tree[startPrefix] = tree[startPrefix] || new IntervalMultiTree();
     tree[startPrefix].insert(start, end, value);
     if (startPrefix !== endPrefix) {
@@ -305,28 +289,6 @@ class IpCollection {
   clear() {
     this.dataV4 = {};
     this.dataV6 = {};
-  }
-
-  /**
-   * get size for database
-   * @return DataSize
-   */
-  get size() {
-    return {
-      v4: 0, //this.dataV4.size,
-      v6: 0, //this.dataV6.size
-    };
-  }
-
-  /**
-   * get levels deep for database
-   * @return DataSize
-   */
-  get height() {
-    return {
-      v4: 0,
-      v6: 0,
-    };
   }
 
 }
