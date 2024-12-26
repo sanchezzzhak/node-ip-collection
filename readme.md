@@ -44,15 +44,6 @@ console.log(ip.lookup('103.18.158.1'))
 | clear()                                                     | clear all data                                |
 
 
-```js
-console.time('test')
-console.log('result', '151.236.160.253', ip.lookup('151.236.160.253', true));
-console.timeEnd('test')
-```
-* is export data to json and load data from json
-* full load data ~8sec
-* search geoname_id ~0.736ms
-
 # Benchmark current test data:
 test [benchmark.js](tests%2Fbenchmark.js). database size prefixes: v4: 7800 ranges , v6: 203 ranges
 ```text
