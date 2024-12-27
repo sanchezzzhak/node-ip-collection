@@ -4,6 +4,8 @@ const Timer = require('./utils/timer');
 const IP4 = 'v4';
 const IP6 = 'v6';
 const IP_UNK = 'unk';
+const RESULT_FORMAT_DEFAULT = 'default';
+const RESULT_FORMAT_STAT = 'stat-result';
 
 /**
  * Fix Math.max(min, max) for BigInt range 128bit
@@ -31,6 +33,11 @@ const stringHash = (str) => {
 
 
 class IntervalNode {
+  /**
+   *
+   * @param {Interval} interval
+   * @param {*} value
+   */
   constructor(interval, value) {
     this.interval = interval; // { start: BigInt, end: BigInt }
     this.value = value;
@@ -42,14 +49,30 @@ class IntervalNode {
 }
 
 class IntervalMultiTree {
-  constructor() {
-    this.root = null;
-  }
 
+  /**
+   * @type {IntervalNode|null}
+   */
+  root = null;
+
+  /**
+   * @param {Interval} a
+   * @param {Interval} b
+   * @return {boolean}
+   * @private
+   */
   #overlaps(a, b) {
     return a.start <= b.end && b.start <= a.end;
   }
 
+  /**
+   *
+   * @param {IntervalNode} node
+   * @param {Interval} interval
+   * @param {any} value
+   * @return {IntervalNode|*}
+   * @private
+   */
   #insertNode(node, interval, value) {
     if (!node) {
       return new IntervalNode(interval, value);
@@ -69,16 +92,33 @@ class IntervalMultiTree {
     return node;
   }
 
+  /**
+   * Insert range to tree
+   * @param {string|number|bigint} start
+   * @param {string|number|bigint} end
+   * @param {any} value
+   */
   insert(start, end, value) {
     this.root = this.#insertNode(this.root, { start: BigInt(start), end: BigInt(end) }, value);
   }
 
+  /**
+   * Search range for ip bigint string
+   * @param {string|number|bigint} ip
+   * @return {*[]}
+   */
   search(ip) {
     const results = [];
     this.#searchNode(this.root, BigInt(ip), results);
     return results;
   }
 
+  /**
+   * search avl nodes ang aggregate result to results argument
+   * @param {IntervalNode|null} node
+   * @param {bigint} ip
+   * @param {any[]} results
+   */
   #searchNode(node, ip, results) {
     if (!node) return;
     if (ip <= node.maxEnd) {
@@ -94,14 +134,26 @@ class IntervalMultiTree {
 }
 
 class IpCollection {
+  /**
+   * @type {DataCollection}
+   */
+  dataV4 = {};
+  /**
+   * @type {DataCollection}
+   */
+  dataV6 = {};
+  /**
+   * @type {ResultFormat}
+   */
+  resultFormat = RESULT_FORMAT_DEFAULT;
 
   /**
    * @param {IpCollectionOptions} options
    */
   constructor(options = {}) {
-    this.dataV4 = {};
-    this.dataV6 = {};
-    this.resultFormat = options.resultFormat ?? 'default';
+    if (options.resultFormat) {
+      this.resultFormat = options.resultFormat;
+    }
   }
 
   /**
@@ -142,7 +194,7 @@ class IpCollection {
 
   /**
    * @param {string} ipNum
-   * @param {{[k:string]:IntervalMultiTree}} collection
+   * @param {DataCollection} collection
    * @param {boolean} all
    * @return {DefaultResult|StatResult}
    * @private
@@ -157,26 +209,23 @@ class IpCollection {
     const ip = BigInt(ipNum);
     result.push(...(collection[prefix].search(ip) || []));
     return this.#result({
-      result,
-      time: timer.end(),
+      result, time: timer.end()
     });
   }
 
   /**
-   *
-   * @param result
-   * @param time
+   * @param {*[]} result
+   * @param {number|string} time
    * @return {DefaultResult|StatResult}
    */
-  #result({ result = [], time = 0}) {
-    const uniqueResult = [... new Set(result)];
-    if (this.resultFormat === 'stat-result') {
+  #result({ result = [], time = 0 }) {
+    const uniqueResult = [...new Set(result)];
+    if (this.resultFormat === RESULT_FORMAT_STAT) {
       return {
-        time,
-        result: uniqueResult,
+        time, result: uniqueResult
       };
     }
-    return uniqueResult
+    return uniqueResult;
   }
 
   /**
@@ -238,10 +287,7 @@ class IpCollection {
    * @param {string|number} value
    */
   insertRangeAddress(startAddr, endAddr, ipType, value) {
-    this.insertRange(
-      startAddr.bigInteger().toString(),
-      endAddr.bigInteger().toString(), ipType, value
-    );
+    this.insertRange(startAddr.bigInteger().toString(), endAddr.bigInteger().toString(), ipType, value);
   }
 
   /**
@@ -283,7 +329,8 @@ class IpCollection {
     }
 
   }
-    /**
+
+  /**
    * clear all data
    */
   clear() {
