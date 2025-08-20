@@ -1,35 +1,12 @@
 const { Address6, Address4 } = require('ip-address');
 const Timer = require('./utils/timer');
+const { bigIntMax } = require('./utils/helper');
 
 const IP4 = 'v4';
 const IP6 = 'v6';
 const IP_UNK = 'unk';
 const RESULT_FORMAT_DEFAULT = 'default';
 const RESULT_FORMAT_STAT = 'stat-result';
-
-/**
- * Fix Math.max(min, max) for BigInt range 128bit
- * @param args
- * @return {*}
- */
-const bigIntMax = (...args) => args.reduce((m, e) => e > m ? e : m);
-
-/**
- * hash big string to number hash
- * @param {string|number} str
- * @return {number}
- */
-const stringHash = (str) => {
-  if (typeof str === 'number') {
-    return str;
-  }
-  let hash = 0;
-  for (let i = 0, len = str.length; i < len; i = i + 1) {
-    const c = str.charCodeAt(i);
-    hash = (((hash << 5) - hash) + c) | 0;
-  }
-  return hash;
-};
 
 
 class IntervalNode {
@@ -176,7 +153,7 @@ class IpCollection {
 
   /**
    * cast bigint to ip v4 string
-   * @param {bigint} val
+   * @param {bigint|*} val
    * @return {string}
    */
   castBigIntIpToV4Str(val) {
@@ -185,7 +162,7 @@ class IpCollection {
 
   /**
    * cast bigint to ip v6 string
-   * @param {bigint} val
+   * @param {bigint|*} val
    * @return {string}
    */
   castBigIntIpToV6Str(val) {
@@ -265,7 +242,7 @@ class IpCollection {
    * @param {string} start         - string bigInt ip range start
    * @param {string} end           - string bigInt ip range end
    * @param {IpType} ipType        - ip type
-   * @param {string|number} value
+   * @param {string|number} value  - certain identifier value
    */
   insertRange(start, end, ipType, value) {
     const startPrefix = start.toString().substring(0, 2);
