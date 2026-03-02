@@ -11,3 +11,4 @@ tests/
 coverage/
 docs/
 .output
+.npmrc
