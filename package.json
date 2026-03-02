@@ -1,6 +1,6 @@
 {
   "name": "node-ip-collection",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Nodejs ip collection (fast search ip in custom range)",
   "main": "index.js",
   "type": "commonjs",
