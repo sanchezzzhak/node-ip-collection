@@ -84,4 +84,5 @@ export default class IpCollection {
 
   clear(): void;
 
+  analytics(): any;
 }

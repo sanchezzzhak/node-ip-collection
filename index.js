@@ -8,6 +8,19 @@ const IP_UNK = 'unk';
 const RESULT_FORMAT_DEFAULT = 'default';
 const RESULT_FORMAT_STAT = 'stat-result';
 
+const getV4Bucket = (bigIntIp) => {
+  return Number(BigInt(bigIntIp) >> 24n);
+};
+
+const getV6Bucket = (bigIntIp) => {
+  return Number(BigInt(bigIntIp) >> 112n);
+};
+
+const getBuckets = (start, end, ipType) => {
+  const s = (ipType === IP4) ? getV4Bucket(start) : getV6Bucket(start);
+  const e = (ipType === IP4) ? getV4Bucket(end) : getV6Bucket(end);
+  return {s, e};
+};
 
 class IntervalNode {
   /**
@@ -98,14 +111,18 @@ class IntervalMultiTree {
    */
   #searchNode(node, ip, results) {
     if (!node) return;
-    if (ip <= node.maxEnd) {
-      for (const interval of node.intervals) {
-        if (ip >= interval.start && ip <= interval.end) {
-          results.push(node.value);
-        }
-      }
+
+    // if the ip is in the current node
+    if (ip >= node.interval.start && ip <= node.interval.end) {
+      results.push(node.value);
+    }
+
+    // Go to the left subtree if there may be a suitable interval there
+    if (node.left && ip <= node.left.maxEnd) {
       this.#searchNode(node.left, ip, results);
     }
+
+    // We always check the right one, since there may be intervals starting later
     this.#searchNode(node.right, ip, results);
   }
 }
@@ -128,9 +145,34 @@ class IpCollection {
    * @param {IpCollectionOptions} options
    */
   constructor(options = {}) {
+    this.clear()
     if (options.resultFormat) {
       this.resultFormat = options.resultFormat;
     }
+  }
+
+  /**
+   * Method for obtaining detailed analytics
+   */
+  analytics() {
+    const memory = process.memoryUsage();
+    return {
+      counts: {
+        v4TotalNodes: this.stats.v4Nodes,
+        v6TotalNodes: this.stats.v6Nodes,
+        v4ActiveBuckets: Object.keys(this.dataV4).length,
+        v6ActiveBuckets: Object.keys(this.dataV6).length,
+      },
+      memory: {
+        rss: `${(memory.rss / 1024 / 1024).toFixed(2)} MB`, // Shared process memory
+        heapUsed: `${(memory.heapUsed / 1024 / 1024).toFixed(2)} MB`, // Really busy with objects
+        heapTotal: `${(memory.heapTotal / 1024 / 1024).toFixed(2)} MB` // V8 highlighted
+      },
+      averageNodesPerBucket: {
+        v4: (this.stats.v4Nodes / (Object.keys(this.dataV4).length || 1)).toFixed(2),
+        v6: (this.stats.v6Nodes / (Object.keys(this.dataV6).length || 1)).toFixed(2)
+      }
+    };
   }
 
   /**
@@ -179,12 +221,15 @@ class IpCollection {
   #eachLookup(ipNum, collection, all = true) {
     const result = [];
     const timer = new Timer();
-    const prefix = ipNum.substring(0, 2);
-    if (!collection[prefix]) {
+    const ip = BigInt(ipNum);
+    const isV6 = ip > 4294967295n;
+    const bucketIdx = isV6 ? getV6Bucket(ip) : getV4Bucket(ip);
+
+    if (!collection[bucketIdx]) {
       return this.#result({ result: [], time: timer.end() });
     }
-    const ip = BigInt(ipNum);
-    result.push(...(collection[prefix].search(ip) || []));
+
+    result.push(...(collection[bucketIdx].search(ip) || []));
     return this.#result({
       result, time: timer.end()
     });
@@ -245,14 +290,19 @@ class IpCollection {
    * @param {string|number} value  - certain identifier value
    */
   insertRange(start, end, ipType, value) {
-    const startPrefix = start.toString().substring(0, 2);
-    const endPrefix = end.toString().substring(0, 2);
+    const s = BigInt(start);
+    const e = BigInt(end);
     const tree = ipType === IP6 ? this.dataV6 : this.dataV4;
-    tree[startPrefix] = tree[startPrefix] || new IntervalMultiTree();
-    tree[startPrefix].insert(start, end, value);
-    if (startPrefix !== endPrefix) {
-      tree[endPrefix] = tree[endPrefix] || new IntervalMultiTree();
-      tree[endPrefix].insert(start, end, value);
+    const { s: startBucket, e: endBucket } = getBuckets(s, e, ipType);
+
+    for (let i = startBucket; i <= endBucket; i++) {
+      if (!tree[i]) {
+        tree[i] = new IntervalMultiTree();
+        if (ipType === IP4) this.stats.v4Buckets++; else this.stats.v6Buckets++;
+      }
+      tree[i].insert(s, e, value);
+      // Node counter increment
+      if (ipType === IP4) this.stats.v4Nodes++; else this.stats.v6Nodes++;
     }
   }
 
@@ -313,6 +363,12 @@ class IpCollection {
   clear() {
     this.dataV4 = {};
     this.dataV6 = {};
+    this.stats = {
+      v4Nodes: 0,
+      v6Nodes: 0,
+      v4Buckets: 0,
+      v6Buckets: 0
+    }
   }
 
 }

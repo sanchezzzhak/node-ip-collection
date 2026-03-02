@@ -20,6 +20,11 @@ for (let operatorId in IpDataOperators) {
   ip.loadFromString(IpDataOperators[operatorId], operatorId);
 }
 
+console.log('--- Data Analytics ---');
+console.table(ip.analytics().counts);
+console.log('--- Memory status ---');
+console.table(ip.analytics().memory);
+
 const suite = new Suite;
 
 suite.on('cycle', function(event) {
