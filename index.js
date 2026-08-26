@@ -181,7 +181,7 @@ class IpCollection {
    * @return {string}
    */
   castIpV6ToNum(ip) {
-    return new Address6(ip, void 0).bigInteger().toString();
+    return new Address6(ip, void 0).bigInt().toString();
   }
 
   /**
@@ -190,7 +190,7 @@ class IpCollection {
    * @return {string}
    */
   castIpV4ToNum(ip) {
-    return new Address4(ip).bigInteger().toString();
+    return new Address4(ip).bigInt().toString();
   }
 
   /**
@@ -199,7 +199,7 @@ class IpCollection {
    * @return {string}
    */
   castBigIntIpToV4Str(val) {
-    return Address4.fromBigInteger(val).correctForm();
+    return Address4.fromBigInt(val).correctForm();
   }
 
   /**
@@ -208,7 +208,7 @@ class IpCollection {
    * @return {string}
    */
   castBigIntIpToV6Str(val) {
-    return Address6.fromBigInteger(val).correctForm();
+    return Address6.fromBigInt(val).correctForm();
   }
 
   /**
@@ -230,6 +230,7 @@ class IpCollection {
     }
 
     result.push(...(collection[bucketIdx].search(ip) || []));
+
     return this.#result({
       result, time: timer.end()
     });
@@ -314,7 +315,7 @@ class IpCollection {
    * @param {string|number} value
    */
   insertRangeAddress(startAddr, endAddr, ipType, value) {
-    this.insertRange(startAddr.bigInteger().toString(), endAddr.bigInteger().toString(), ipType, value);
+    this.insertRange(startAddr.bigInt().toString(), endAddr.bigInt().toString(), ipType, value);
   }
 
   /**

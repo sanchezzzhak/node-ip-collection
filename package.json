@@ -1,6 +1,6 @@
 {
   "name": "node-ip-collection",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Nodejs ip collection (fast search ip in custom range)",
   "main": "index.js",
   "type": "commonjs",
@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/sanchezzzhak/node-ip-collection",
   "dependencies": {
-    "ip-address": "^9.0.5"
+    "ip-address": "^10.5.0"
   },
   "devDependencies": {
     "chai": "^4.5.0",
